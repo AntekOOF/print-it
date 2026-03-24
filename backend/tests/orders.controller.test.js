@@ -1,0 +1,110 @@
+const assert = require('node:assert/strict');
+const { afterEach, mock, test } = require('node:test');
+const ordersController = require('../src/controllers/orders.controller');
+const ordersService = require('../src/services/orders.service');
+
+const createResponse = () => ({
+  body: null,
+  statusCode: 200,
+  status(code) {
+    this.statusCode = code;
+    return this;
+  },
+  json(payload) {
+    this.body = payload;
+    return this;
+  },
+});
+
+afterEach(() => {
+  mock.restoreAll();
+});
+
+test('createOrder returns the created order with tracking token', async () => {
+  const createdOrder = {
+    id: 7,
+    orderNumber: 'PIT-20260323-ABC123',
+    trackingToken: '0123456789abcdef0123456789abcdef',
+    paymentMethod: 'cash_on_pickup',
+    paymentStatus: 'pending',
+  };
+
+  mock.method(ordersService, 'createOrder', async () => createdOrder);
+
+  const response = createResponse();
+  const next = mock.fn();
+
+  await ordersController.createOrder(
+    {
+      body: {
+        customerName: 'Sample Customer',
+        contactNumber: '09171234567',
+        email: 'customer@example.com',
+        fulfillmentMethod: 'pickup',
+        paymentMethod: 'cash_on_pickup',
+        notes: 'Please prepare quickly',
+        items: [
+          {
+            productId: 1,
+            quantity: 2,
+          },
+        ],
+      },
+    },
+    response,
+    next,
+  );
+
+  assert.equal(response.statusCode, 201);
+  assert.deepEqual(response.body.data, createdOrder);
+  assert.equal(next.mock.calls.length, 0);
+});
+
+test('trackOrder returns 404 when no matching order exists', async () => {
+  mock.method(ordersService, 'trackOrder', async () => null);
+
+  const response = createResponse();
+  const next = mock.fn();
+
+  await ordersController.trackOrder(
+    {
+      body: {
+        orderNumber: 'PIT-20260323-ABC123',
+        contactNumber: '09171234567',
+      },
+    },
+    response,
+    next,
+  );
+
+  assert.equal(next.mock.calls.length, 1);
+  assert.equal(next.mock.calls[0].arguments[0].status, 404);
+});
+
+test('updatePaymentStatus returns the updated order payload', async () => {
+  const updatedOrder = {
+    id: 7,
+    paymentStatus: 'paid',
+  };
+
+  const updateMock = mock.method(ordersService, 'updatePaymentStatus', async () => updatedOrder);
+  const response = createResponse();
+  const next = mock.fn();
+
+  await ordersController.updatePaymentStatus(
+    {
+      params: {
+        orderId: '7',
+      },
+      body: {
+        paymentStatus: 'paid',
+      },
+    },
+    response,
+    next,
+  );
+
+  assert.deepEqual(updateMock.mock.calls[0].arguments, [7, 'paid']);
+  assert.deepEqual(response.body.data, updatedOrder);
+  assert.equal(next.mock.calls.length, 0);
+});

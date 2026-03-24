@@ -1,0 +1,9 @@
+frontend/node_modules
+backend/node_modules
+frontend/dist
+backend/.env
+frontend/.env
+frontend/.netlify
+backend/uploads
+backend/backend-dev.log
+frontend/frontend-dev.log
