@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import QuantitySelector from '../components/QuantitySelector.jsx';
 import ServiceChips from '../components/ServiceChips.jsx';
+import { useAuth } from '../hooks/useAuth.js';
 import { useCart } from '../hooks/useCart.js';
 import { createOrder, getPaymentConfig } from '../lib/api.js';
 import { formatCurrency } from '../lib/formatters.js';
@@ -13,11 +14,10 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function CheckoutPage() {
   const navigate = useNavigate();
+  const { token, user } = useAuth();
   const { cartItems, clearCart, removeItem, subtotal, updateQuantity } = useCart();
   const [form, setForm] = useState({
-    customerName: '',
     contactNumber: '',
-    email: '',
     fulfillmentMethod: 'pickup',
     paymentMethod: 'cash_on_pickup',
     paymentReference: '',
@@ -68,13 +68,13 @@ function CheckoutPage() {
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    if (!form.customerName.trim() || !form.contactNumber.trim()) {
-      setError('Customer name and contact number are required.');
+    if (!form.contactNumber.trim()) {
+      setError('Contact number is required.');
       return;
     }
 
-    if (form.email && !EMAIL_PATTERN.test(form.email)) {
-      setError('Please enter a valid email address.');
+    if (user?.email && !EMAIL_PATTERN.test(user.email)) {
+      setError('Your account email is invalid. Please sign in again.');
       return;
     }
 
@@ -87,8 +87,10 @@ function CheckoutPage() {
       setIsSubmitting(true);
       setError('');
 
-      const order = await createOrder({
+      const order = await createOrder(token, {
+        customerName: user?.fullName || '',
         ...form,
+        email: user?.email || '',
         items: cartItems.map((item) => ({
           productId: item.productId,
           quantity: item.quantity,
@@ -117,7 +119,7 @@ function CheckoutPage() {
           <ReceiptText size={30} />
           <h1>No items ready for checkout</h1>
           <p>Build the order from the menu first, then return here to submit it.</p>
-          <Link className="button button--primary" to="/">
+          <Link className="button button--primary" to="/menu">
             <ArrowLeft size={16} />
             Back to menu
           </Link>
@@ -139,7 +141,7 @@ function CheckoutPage() {
           <h1>Submit order details</h1>
         </div>
 
-        <Link className="button button--ghost" to="/">
+        <Link className="button button--ghost" to="/menu">
           <ArrowLeft size={16} />
           Continue shopping
         </Link>
@@ -149,26 +151,37 @@ function CheckoutPage() {
         <form className="panel" onSubmit={handleSubmit}>
           <div className="panel__header">
             <div>
-              <span className="eyebrow">Customer details</span>
+              <span className="eyebrow">Account checkout</span>
               <h2>Order information</h2>
             </div>
           </div>
 
-          <div className="field">
-            <label htmlFor="customerName">Customer name</label>
-            <input id="customerName" value={form.customerName} onChange={updateField('customerName')} />
-          </div>
-
           <div className="form-grid">
             <div className="field">
-              <label htmlFor="contactNumber">Contact number</label>
-              <input id="contactNumber" value={form.contactNumber} onChange={updateField('contactNumber')} />
+              <label htmlFor="accountName">Customer name</label>
+              <input id="accountName" readOnly value={user?.fullName || ''} />
             </div>
 
             <div className="field">
-              <label htmlFor="email">Email</label>
-              <input id="email" type="email" value={form.email} onChange={updateField('email')} />
+              <label htmlFor="accountEmail">Account email</label>
+              <input id="accountEmail" readOnly type="email" value={user?.email || ''} />
             </div>
+          </div>
+
+          <div className="field">
+            <label htmlFor="contactNumber">Contact number for this order</label>
+            <input
+              id="contactNumber"
+              placeholder="0917..."
+              value={form.contactNumber}
+              onChange={updateField('contactNumber')}
+            />
+          </div>
+
+          <div className="panel panel--soft">
+            <p className="summary-item__note">
+              Checkout is tied to your signed-in account so your order confirmation also appears in your account page.
+            </p>
           </div>
 
           <div className="form-grid">

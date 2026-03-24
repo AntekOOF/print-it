@@ -1,5 +1,18 @@
 const authService = require('../services/auth.service');
-const { validateLoginPayload } = require('../utils/validation');
+const { validateLoginPayload, validateRegisterPayload } = require('../utils/validation');
+
+const register = async (request, response, next) => {
+  try {
+    const payload = validateRegisterPayload(request.body);
+    const authResult = await authService.register(payload);
+    response.status(201).json({
+      data: authResult,
+      message: 'Account created successfully.',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
 const login = async (request, response, next) => {
   try {
@@ -26,4 +39,5 @@ const me = async (request, response, next) => {
 module.exports = {
   login,
   me,
+  register,
 };

@@ -12,6 +12,20 @@ const mapUserRow = (row) => ({
   createdAt: row.created_at,
 });
 
+const issueToken = (user) =>
+  jwt.sign(
+    {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+      fullName: user.full_name || user.fullName,
+    },
+    jwtSecret,
+    {
+      expiresIn: jwtExpiresIn,
+    },
+  );
+
 const getUserById = async (userId) => {
   const { rows } = await db.query(
     `
@@ -23,6 +37,39 @@ const getUserById = async (userId) => {
   );
 
   return rows[0] ? mapUserRow(rows[0]) : null;
+};
+
+const register = async ({ email, fullName, password }) => {
+  const existingUserResult = await db.query(
+    `
+      SELECT id
+      FROM users
+      WHERE email = $1
+      LIMIT 1
+    `,
+    [email],
+  );
+
+  if (existingUserResult.rows[0]) {
+    throw createHttpError(409, 'An account with this email already exists.');
+  }
+
+  const passwordHash = await bcrypt.hash(password, 12);
+  const { rows } = await db.query(
+    `
+      INSERT INTO users (full_name, email, password_hash, role)
+      VALUES ($1, $2, $3, 'customer')
+      RETURNING id, full_name, email, role, created_at
+    `,
+    [fullName, email, passwordHash],
+  );
+
+  const user = rows[0];
+
+  return {
+    token: issueToken(user),
+    user: mapUserRow(user),
+  };
 };
 
 const login = async ({ email, password }) => {
@@ -48,21 +95,8 @@ const login = async ({ email, password }) => {
     throw createHttpError(401, 'Invalid email or password.');
   }
 
-  const token = jwt.sign(
-    {
-      sub: user.id,
-      email: user.email,
-      role: user.role,
-      fullName: user.full_name,
-    },
-    jwtSecret,
-    {
-      expiresIn: jwtExpiresIn,
-    },
-  );
-
   return {
-    token,
+    token: issueToken(user),
     user: mapUserRow(user),
   };
 };
@@ -70,4 +104,5 @@ const login = async ({ email, password }) => {
 module.exports = {
   getUserById,
   login,
+  register,
 };

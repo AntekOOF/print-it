@@ -150,6 +150,20 @@ const listOrders = async (filters = {}) => {
   return getOrdersFromResult(db, ordersResult.rows);
 };
 
+const listOrdersByUser = async (userId) => {
+  const ordersResult = await db.query(
+    `
+      SELECT ${ORDER_FIELDS_SQL}
+      FROM orders
+      WHERE user_id = $1
+      ORDER BY created_at DESC
+    `,
+    [userId],
+  );
+
+  return getOrdersFromResult(db, ordersResult.rows);
+};
+
 const getOrderSummary = async () => {
   const { rows } = await db.query(
     `
@@ -264,7 +278,11 @@ const attachPaymentSessionIfNeeded = async (order) => {
   }
 };
 
-const createOrder = async (orderInput) => {
+const createOrder = async (orderInput, authUser) => {
+  if (!authUser?.sub) {
+    throw createHttpError(401, 'Authentication is required to place an order.');
+  }
+
   if (orderInput.paymentMethod === 'gcash' && !hasPaymongoConfiguration()) {
     throw createHttpError(503, 'GCash is not configured yet. Please add PayMongo credentials on the server.');
   }
@@ -339,6 +357,7 @@ const createOrder = async (orderInput) => {
     const orderResult = await client.query(
       `
         INSERT INTO orders (
+          user_id,
           order_number,
           tracking_token,
           customer_name,
@@ -353,15 +372,16 @@ const createOrder = async (orderInput) => {
           subtotal,
           total
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', $8, $9, $10, $11, $11)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', $9, $10, $11, $12, $12)
         RETURNING ${ORDER_FIELDS_SQL}
       `,
       [
+        authUser.sub,
         orderNumber,
         trackingToken,
-        orderInput.customerName,
+        authUser.fullName || orderInput.customerName,
         orderInput.contactNumber,
-        orderInput.email || null,
+        authUser.email || orderInput.email || null,
         orderInput.fulfillmentMethod,
         orderInput.notes || null,
         orderInput.paymentMethod,
@@ -644,6 +664,7 @@ module.exports = {
   getOrderSummary,
   handlePaymentWebhookEvent,
   listOrders,
+  listOrdersByUser,
   trackOrder,
   updatePaymentStatus,
   updateOrderStatus,

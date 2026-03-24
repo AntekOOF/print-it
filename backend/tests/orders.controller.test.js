@@ -36,6 +36,12 @@ test('createOrder returns the created order with tracking token', async () => {
 
   await ordersController.createOrder(
     {
+      user: {
+        sub: 5,
+        email: 'customer@example.com',
+        fullName: 'Sample Customer',
+        role: 'customer',
+      },
       body: {
         customerName: 'Sample Customer',
         contactNumber: '09171234567',
@@ -57,6 +63,12 @@ test('createOrder returns the created order with tracking token', async () => {
 
   assert.equal(response.statusCode, 201);
   assert.deepEqual(response.body.data, createdOrder);
+  assert.deepEqual(ordersService.createOrder.mock.calls[0].arguments[1], {
+    sub: 5,
+    email: 'customer@example.com',
+    fullName: 'Sample Customer',
+    role: 'customer',
+  });
   assert.equal(next.mock.calls.length, 0);
 });
 
@@ -106,5 +118,32 @@ test('updatePaymentStatus returns the updated order payload', async () => {
 
   assert.deepEqual(updateMock.mock.calls[0].arguments, [7, 'paid']);
   assert.deepEqual(response.body.data, updatedOrder);
+  assert.equal(next.mock.calls.length, 0);
+});
+
+test('listMyOrders returns orders for the authenticated customer', async () => {
+  const myOrders = [
+    {
+      id: 9,
+      orderNumber: 'PIT-20260324-CUST09',
+    },
+  ];
+
+  const listMock = mock.method(ordersService, 'listOrdersByUser', async () => myOrders);
+  const response = createResponse();
+  const next = mock.fn();
+
+  await ordersController.listMyOrders(
+    {
+      user: {
+        sub: 12,
+      },
+    },
+    response,
+    next,
+  );
+
+  assert.deepEqual(listMock.mock.calls[0].arguments, [12]);
+  assert.deepEqual(response.body.data, myOrders);
   assert.equal(next.mock.calls.length, 0);
 });

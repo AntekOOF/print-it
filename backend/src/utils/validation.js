@@ -332,6 +332,30 @@ const validateLoginPayload = (payload) => {
   };
 };
 
+const validateRegisterPayload = (payload) => {
+  const fullName = trimString(payload?.fullName);
+  const email = trimString(payload?.email).toLowerCase();
+  const password = trimString(payload?.password);
+
+  if (fullName.length < 2 || fullName.length > 120) {
+    throw createHttpError(400, 'Full name must be between 2 and 120 characters.');
+  }
+
+  if (!isValidEmail(email)) {
+    throw createHttpError(400, 'Email address is invalid.');
+  }
+
+  if (password.length < 8 || password.length > 72) {
+    throw createHttpError(400, 'Password must be between 8 and 72 characters.');
+  }
+
+  return {
+    email,
+    fullName,
+    password,
+  };
+};
+
 const validateTrackingToken = (value) => {
   const trackingToken = trimString(value);
 
@@ -356,6 +380,7 @@ module.exports = {
   validatePaymentStatusPayload,
   validateProductId,
   validateProductPayload,
+  validateRegisterPayload,
   validateTrackingPayload,
   validateTrackingToken,
 };

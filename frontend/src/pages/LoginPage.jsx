@@ -1,13 +1,13 @@
 import { motion } from 'framer-motion';
 import { LockKeyhole, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.js';
 
-function AdminLoginPage() {
+function LoginPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isAuthenticated, isLoading, login, logout, user } = useAuth();
+  const { isAuthenticated, isLoading, login, user } = useAuth();
   const [form, setForm] = useState({
     email: '',
     password: '',
@@ -15,11 +15,11 @@ function AdminLoginPage() {
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  if (!isLoading && isAuthenticated && user?.role === 'admin') {
-    return <Navigate replace to="/admin" />;
+  if (!isLoading && isAuthenticated) {
+    return <Navigate replace to={user?.role === 'admin' ? '/admin' : '/account'} />;
   }
 
-  const redirectTo = location.state?.from?.pathname || '/admin';
+  const redirectTo = location.state?.from?.pathname || '/account';
 
   const updateField = (field) => (event) =>
     setForm((currentForm) => ({
@@ -34,14 +34,7 @@ function AdminLoginPage() {
       setIsSubmitting(true);
       setError('');
       const signedInUser = await login(form);
-
-      if (signedInUser.role !== 'admin') {
-        logout();
-        setError('This login is only for administrators.');
-        return;
-      }
-
-      navigate(redirectTo, { replace: true });
+      navigate(signedInUser.role === 'admin' ? '/admin' : redirectTo, { replace: true });
     } catch (loginError) {
       setError(loginError.message);
     } finally {
@@ -58,20 +51,20 @@ function AdminLoginPage() {
     >
       <section className="auth-card panel">
         <div className="auth-card__hero">
-          <span className="eyebrow">Protected admin</span>
-          <h1>Sign in to manage Print-IT</h1>
-          <p>Use the seeded admin account or your updated admin credentials from the backend environment.</p>
+          <span className="eyebrow">Customer account</span>
+          <h1>Sign in before placing an order</h1>
+          <p>Account-based checkout helps confirm real customers and keeps your order history in one place.</p>
         </div>
 
         <form className="auth-card__form" onSubmit={handleSubmit}>
           <div className="field">
-            <label htmlFor="adminEmail">Email</label>
-            <input id="adminEmail" type="email" value={form.email} onChange={updateField('email')} />
+            <label htmlFor="customerEmail">Email</label>
+            <input id="customerEmail" type="email" value={form.email} onChange={updateField('email')} />
           </div>
 
           <div className="field">
-            <label htmlFor="adminPassword">Password</label>
-            <input id="adminPassword" type="password" value={form.password} onChange={updateField('password')} />
+            <label htmlFor="customerPassword">Password</label>
+            <input id="customerPassword" type="password" value={form.password} onChange={updateField('password')} />
           </div>
 
           {error ? <p className="form-error">{error}</p> : null}
@@ -83,12 +76,16 @@ function AdminLoginPage() {
 
           <div className="auth-card__note">
             <ShieldCheck size={16} />
-            <span>Admin CRUD, order visibility, and status updates are now restricted behind JWT auth.</span>
+            <span>Your customer account is used for order confirmation, tracking, and checkout access.</span>
           </div>
+
+          <p className="auth-card__switch">
+            New here? <Link to="/signup">Create an account</Link>
+          </p>
         </form>
       </section>
     </motion.main>
   );
 }
 
-export default AdminLoginPage;
+export default LoginPage;

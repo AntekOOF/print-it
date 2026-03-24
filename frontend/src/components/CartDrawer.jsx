@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { ShoppingBag, Trash2, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth.js';
 import { useCart } from '../hooks/useCart.js';
 import { formatCurrency } from '../lib/formatters.js';
 import { resolveMediaUrl } from '../lib/media.js';
@@ -9,6 +10,7 @@ import ServiceChips from './ServiceChips.jsx';
 
 function CartDrawer({ isOpen, onClose }) {
   const { cartItems, itemCount, removeItem, subtotal, updateQuantity } = useCart();
+  const { isAuthenticated } = useAuth();
 
   return (
     <AnimatePresence>
@@ -83,11 +85,19 @@ function CartDrawer({ isOpen, onClose }) {
                     <span>Subtotal</span>
                     <strong>{formatCurrency(subtotal)}</strong>
                   </div>
-                  <p>Checkout supports cash on pickup or GCash when the payment provider is configured.</p>
+                  <p>
+                    {isAuthenticated
+                      ? 'Checkout supports cash on pickup or GCash when the payment provider is configured.'
+                      : 'Sign in before checkout so every order stays tied to a real customer account.'}
+                  </p>
                 </div>
 
-                <Link className="button button--primary button--block" to="/checkout" onClick={onClose}>
-                  Proceed to checkout
+                <Link
+                  className="button button--primary button--block"
+                  to={isAuthenticated ? '/checkout' : '/login'}
+                  onClick={onClose}
+                >
+                  {isAuthenticated ? 'Proceed to checkout' : 'Sign in to continue'}
                 </Link>
               </>
             ) : (

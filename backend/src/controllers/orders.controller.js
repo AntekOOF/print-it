@@ -20,6 +20,15 @@ const listOrders = async (request, response, next) => {
   }
 };
 
+const listMyOrders = async (request, response, next) => {
+  try {
+    const orders = await ordersService.listOrdersByUser(request.user.sub);
+    response.json({ data: orders });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const getOrderById = async (request, response, next) => {
   try {
     const orderId = validateOrderId(request.params.orderId);
@@ -68,7 +77,7 @@ const trackOrder = async (request, response, next) => {
 const createOrder = async (request, response, next) => {
   try {
     const orderPayload = validateOrderPayload(request.body);
-    const createdOrder = await ordersService.createOrder(orderPayload);
+    const createdOrder = await ordersService.createOrder(orderPayload, request.user);
     response.status(201).json({
       data: createdOrder,
       message: 'Order submitted successfully.',
@@ -121,6 +130,7 @@ module.exports = {
   getOrderSummary,
   getPublicOrder,
   listOrders,
+  listMyOrders,
   trackOrder,
   updatePaymentStatus,
   updateOrderStatus,

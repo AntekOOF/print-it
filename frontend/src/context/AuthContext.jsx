@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { getCurrentUser, loginAdmin } from '../lib/api.js';
+import { getCurrentUser, loginUser, registerUser } from '../lib/api.js';
 import { AuthContext } from './auth-context.js';
 
-const AUTH_STORAGE_KEY = 'print-it-admin-auth';
+const AUTH_STORAGE_KEYS = ['print-it-auth', 'print-it-admin-auth'];
 
 const readStoredAuth = () => {
   if (typeof window === 'undefined') {
@@ -13,7 +13,7 @@ const readStoredAuth = () => {
   }
 
   try {
-    const rawValue = window.localStorage.getItem(AUTH_STORAGE_KEY);
+    const rawValue = AUTH_STORAGE_KEYS.map((key) => window.localStorage.getItem(key)).find(Boolean);
     return rawValue ? JSON.parse(rawValue) : { token: '', user: null };
   } catch {
     return {
@@ -47,7 +47,7 @@ export function AuthProvider({ children }) {
         }
       } catch {
         if (!ignore) {
-          window.localStorage.removeItem(AUTH_STORAGE_KEY);
+          AUTH_STORAGE_KEYS.forEach((key) => window.localStorage.removeItem(key));
           setAuthState({
             token: '',
             user: null,
@@ -71,15 +71,27 @@ export function AuthProvider({ children }) {
     setAuthState(nextState);
 
     if (!nextState.token) {
-      window.localStorage.removeItem(AUTH_STORAGE_KEY);
+      AUTH_STORAGE_KEYS.forEach((key) => window.localStorage.removeItem(key));
       return;
     }
 
-    window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(nextState));
+    AUTH_STORAGE_KEYS.forEach((key) => window.localStorage.removeItem(key));
+    window.localStorage.setItem(AUTH_STORAGE_KEYS[0], JSON.stringify(nextState));
   };
 
   const login = async (credentials) => {
-    const response = await loginAdmin(credentials);
+    const response = await loginUser(credentials);
+    const nextState = {
+      token: response.token,
+      user: response.user,
+    };
+
+    persistAuth(nextState);
+    return response.user;
+  };
+
+  const register = async (payload) => {
+    const response = await registerUser(payload);
     const nextState = {
       token: response.token,
       user: response.user,
@@ -100,9 +112,11 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider
       value={{
         isAuthenticated: Boolean(token && user),
+        isAdmin: user?.role === 'admin',
         isLoading,
         login,
         logout,
+        register,
         token,
         user,
       }}

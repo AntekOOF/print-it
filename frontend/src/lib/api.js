@@ -110,11 +110,17 @@ export const uploadPrintFile = async (file) => {
   });
 };
 
-export const loginAdmin = (credentials) =>
+export const registerUser = (payload) =>
+  request('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+export const loginUser = (credentials) =>
   request('/auth/login', {
     method: 'POST',
     body: JSON.stringify(credentials),
   });
+export const loginAdmin = loginUser;
 export const getCurrentUser = (token) => request('/auth/me', { token });
 
 export const getOrders = (token, filters = {}) =>
@@ -129,15 +135,20 @@ export const getOrderById = (token, orderId) =>
   request(`/orders/${orderId}`, {
     token,
   });
+export const getMyOrders = (token) =>
+  request('/orders/mine', {
+    token,
+  });
 export const getPublicOrder = (trackingToken) => request(`/orders/public/${trackingToken}`);
 export const trackOrder = (payload) =>
   request('/orders/track', {
     method: 'POST',
     body: JSON.stringify(payload),
   });
-export const createOrder = (order) =>
+export const createOrder = (token, order) =>
   request('/orders', {
     method: 'POST',
+    token,
     body: JSON.stringify(order),
   });
 export const updateOrderStatus = (token, orderId, status) =>
