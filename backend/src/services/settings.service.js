@@ -41,19 +41,18 @@ const updateSettings = async (payload) => {
     `
       UPDATE site_settings
       SET
-        business_name = $2,
-        hero_headline = $3,
-        hero_subtext = $4,
-        about_summary = $5,
-        contact_email = $6,
-        contact_phone = $7,
-        contact_facebook = $8,
-        contact_location = $9
+        business_name = $1,
+        hero_headline = $2,
+        hero_subtext = $3,
+        about_summary = $4,
+        contact_email = $5,
+        contact_phone = $6,
+        contact_facebook = $7,
+        contact_location = $8
       WHERE id = 1
       RETURNING ${SETTINGS_FIELDS_SQL}
     `,
     [
-      1,
       payload.businessName,
       payload.heroHeadline,
       payload.heroSubtext,
