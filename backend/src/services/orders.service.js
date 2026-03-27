@@ -10,6 +10,7 @@ const {
 
 const ORDER_FIELDS_SQL = `
   id,
+  user_id,
   order_number,
   tracking_token,
   customer_name,
@@ -44,6 +45,20 @@ const ORDER_ITEM_FIELDS_SQL = `
   created_at
 `;
 
+const ORDER_EVENT_FIELDS_SQL = `
+  id,
+  order_id,
+  event_type,
+  title,
+  description,
+  created_at
+`;
+
+const formatLabel = (value) =>
+  String(value || '')
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (character) => character.toUpperCase());
+
 const loadItemsForOrders = async (runner, orderIds) => {
   if (!orderIds.length) {
     return [];
@@ -62,17 +77,33 @@ const loadItemsForOrders = async (runner, orderIds) => {
   return itemsResult.rows;
 };
 
+const loadEventsForOrders = async (runner, orderIds) => {
+  if (!orderIds.length) {
+    return [];
+  }
+
+  const eventsResult = await runner.query(
+    `
+      SELECT ${ORDER_EVENT_FIELDS_SQL}
+      FROM order_events
+      WHERE order_id = ANY($1::int[])
+      ORDER BY created_at ASC, id ASC
+    `,
+    [orderIds],
+  );
+
+  return eventsResult.rows;
+};
+
 const getOrdersFromResult = async (runner, orderRows) => {
   if (!orderRows.length) {
     return [];
   }
 
-  const items = await loadItemsForOrders(
-    runner,
-    orderRows.map((row) => row.id),
-  );
+  const orderIds = orderRows.map((row) => row.id);
+  const [items, events] = await Promise.all([loadItemsForOrders(runner, orderIds), loadEventsForOrders(runner, orderIds)]);
 
-  return hydrateOrders(orderRows, items);
+  return hydrateOrders(orderRows, items, events);
 };
 
 const getOrderByField = async (fieldName, value, existingRunner) => {
@@ -135,6 +166,54 @@ const buildOrderFilters = (filters) => {
   };
 };
 
+const recordOrderEvent = async (runner, orderId, event) => {
+  await runner.query(
+    `
+      INSERT INTO order_events (order_id, event_type, title, description)
+      VALUES ($1, $2, $3, $4)
+    `,
+    [orderId, event.eventType, event.title, event.description || null],
+  );
+};
+
+const buildStatusDescription = (status) => {
+  switch (status) {
+    case 'pending':
+      return 'The order is queued and waiting for staff confirmation.';
+    case 'preparing':
+      return 'The team has started preparing the items or print job.';
+    case 'ready':
+      return 'The order is ready for pickup or handoff.';
+    case 'completed':
+      return 'The order has been completed successfully.';
+    case 'cancelled':
+      return 'The order was cancelled and should no longer be fulfilled.';
+    default:
+      return 'The order status was updated.';
+  }
+};
+
+const buildPaymentDescription = (paymentStatus, paymentMethod) => {
+  switch (paymentStatus) {
+    case 'awaiting_payment':
+      return paymentMethod === 'manual_gcash'
+        ? 'Waiting for the customer to send a manual GCash transfer.'
+        : 'Waiting for the customer to complete payment.';
+    case 'paid':
+      return 'Payment has been confirmed.';
+    case 'failed':
+      return 'Payment attempt failed.';
+    case 'expired':
+      return 'The payment window expired before completion.';
+    case 'refunded':
+      return 'Payment was refunded.';
+    case 'pending':
+      return 'Payment will be collected during fulfillment.';
+    default:
+      return 'Payment status was updated.';
+  }
+};
+
 const listOrders = async (filters = {}) => {
   const { values, whereClause } = buildOrderFilters(filters);
   const ordersResult = await db.query(
@@ -170,24 +249,32 @@ const getOrderSummary = async () => {
       SELECT
         COUNT(*)::int AS total_orders,
         COUNT(*) FILTER (WHERE status = 'pending')::int AS pending_orders,
+        COUNT(*) FILTER (WHERE status = 'preparing')::int AS preparing_orders,
+        COUNT(*) FILTER (WHERE status = 'completed')::int AS completed_orders,
         COUNT(*) FILTER (WHERE payment_status = 'paid')::int AS paid_orders,
         COALESCE(SUM(total), 0) AS total_booked,
         COALESCE(SUM(total) FILTER (WHERE payment_status = 'paid'), 0) AS total_paid,
         COALESCE(SUM(total) FILTER (WHERE DATE(created_at) = CURRENT_DATE), 0) AS booked_today,
         COALESCE(SUM(total) FILTER (WHERE DATE(created_at) >= CURRENT_DATE - INTERVAL '6 days'), 0) AS booked_this_week,
+        COALESCE(SUM(total) FILTER (WHERE DATE(created_at) >= CURRENT_DATE - INTERVAL '29 days'), 0) AS booked_this_month,
         COALESCE(SUM(total) FILTER (WHERE payment_status = 'paid' AND DATE(created_at) = CURRENT_DATE), 0) AS paid_today,
-        COALESCE(SUM(total) FILTER (WHERE payment_status = 'paid' AND DATE(created_at) >= CURRENT_DATE - INTERVAL '6 days'), 0) AS paid_this_week
+        COALESCE(SUM(total) FILTER (WHERE payment_status = 'paid' AND DATE(created_at) >= CURRENT_DATE - INTERVAL '6 days'), 0) AS paid_this_week,
+        COALESCE(SUM(total) FILTER (WHERE payment_status = 'paid' AND DATE(created_at) >= CURRENT_DATE - INTERVAL '29 days'), 0) AS paid_this_month
       FROM orders
     `,
   );
 
   return {
+    bookedThisMonth: Number(rows[0].booked_this_month),
     bookedThisWeek: Number(rows[0].booked_this_week),
     bookedToday: Number(rows[0].booked_today),
+    completedOrders: rows[0].completed_orders,
     paidOrders: rows[0].paid_orders,
+    paidThisMonth: Number(rows[0].paid_this_month),
     paidThisWeek: Number(rows[0].paid_this_week),
     paidToday: Number(rows[0].paid_today),
     pendingOrders: rows[0].pending_orders,
+    preparingOrders: rows[0].preparing_orders,
     totalBooked: Number(rows[0].total_booked),
     totalOrders: rows[0].total_orders,
     totalPaid: Number(rows[0].total_paid),
@@ -261,6 +348,12 @@ const attachPaymentSessionIfNeeded = async (order) => {
       [order.id, session.provider, session.reference, session.checkoutUrl],
     );
 
+    await recordOrderEvent(db, order.id, {
+      eventType: 'payment_link_generated',
+      title: 'GCash checkout generated',
+      description: 'A hosted GCash checkout link is ready for the customer.',
+    });
+
     return await getOrderById(order.id);
   } catch (error) {
     await db.query(
@@ -271,6 +364,12 @@ const attachPaymentSessionIfNeeded = async (order) => {
       `,
       [order.id],
     );
+
+    await recordOrderEvent(db, order.id, {
+      eventType: 'payment_status',
+      title: 'Payment Failed',
+      description: 'The payment link could not be prepared.',
+    });
 
     const failedOrder = await getOrderById(order.id);
     failedOrder.paymentError = error.message;
@@ -423,6 +522,18 @@ const createOrder = async (orderInput, authUser) => {
       );
     }
 
+    await recordOrderEvent(client, order.id, {
+      eventType: 'order_created',
+      title: 'Order submitted',
+      description: `Customer submitted an order with ${preparedItems.length} item${preparedItems.length === 1 ? '' : 's'}.`,
+    });
+
+    await recordOrderEvent(client, order.id, {
+      eventType: 'payment_status',
+      title: `Payment ${formatLabel(paymentStatus)}`,
+      description: buildPaymentDescription(paymentStatus, orderInput.paymentMethod),
+    });
+
     await reserveFoodStock(client, preparedItems);
     await client.query('COMMIT');
 
@@ -466,21 +577,40 @@ const trackOrder = async ({ orderNumber, contactNumber }) => {
 };
 
 const updateOrderStatus = async (orderId, status) => {
-  const { rows } = await db.query(
-    `
-      UPDATE orders
-      SET status = $2, updated_at = NOW()
-      WHERE id = $1
-      RETURNING ${ORDER_FIELDS_SQL}
-    `,
-    [orderId, status],
-  );
+  const client = await db.getClient();
+  let updatedOrder;
 
-  if (!rows[0]) {
-    throw createHttpError(404, 'Order not found.');
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query(
+      `
+        UPDATE orders
+        SET status = $2, updated_at = NOW()
+        WHERE id = $1
+        RETURNING ${ORDER_FIELDS_SQL}
+      `,
+      [orderId, status],
+    );
+
+    if (!rows[0]) {
+      throw createHttpError(404, 'Order not found.');
+    }
+
+    await recordOrderEvent(client, orderId, {
+      eventType: 'order_status',
+      title: `Order ${formatLabel(status)}`,
+      description: buildStatusDescription(status),
+    });
+
+    await client.query('COMMIT');
+    updatedOrder = await getOrderById(orderId);
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
   }
 
-  const updatedOrder = await getOrderById(orderId);
   sendOrderStatusEmail(updatedOrder, `Order status updated to ${status}`).catch((error) => {
     console.error('Failed to send order status email:', error.message);
   });
@@ -489,24 +619,43 @@ const updateOrderStatus = async (orderId, status) => {
 };
 
 const updatePaymentStatus = async (orderId, paymentStatus) => {
-  const { rows } = await db.query(
-    `
-      UPDATE orders
-      SET
-        payment_status = $2::varchar,
-        paid_at = CASE WHEN $2::varchar = 'paid' THEN COALESCE(paid_at, NOW()) ELSE NULL END,
-        updated_at = NOW()
-      WHERE id = $1
-      RETURNING ${ORDER_FIELDS_SQL}
-    `,
-    [orderId, paymentStatus],
-  );
+  const client = await db.getClient();
+  let updatedOrder;
 
-  if (!rows[0]) {
-    throw createHttpError(404, 'Order not found.');
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query(
+      `
+        UPDATE orders
+        SET
+          payment_status = $2::varchar,
+          paid_at = CASE WHEN $2::varchar = 'paid' THEN COALESCE(paid_at, NOW()) ELSE NULL END,
+          updated_at = NOW()
+        WHERE id = $1
+        RETURNING ${ORDER_FIELDS_SQL}
+      `,
+      [orderId, paymentStatus],
+    );
+
+    if (!rows[0]) {
+      throw createHttpError(404, 'Order not found.');
+    }
+
+    await recordOrderEvent(client, orderId, {
+      eventType: 'payment_status',
+      title: `Payment ${formatLabel(paymentStatus)}`,
+      description: buildPaymentDescription(paymentStatus, rows[0].payment_method),
+    });
+
+    await client.query('COMMIT');
+    updatedOrder = await getOrderById(orderId);
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
   }
 
-  const updatedOrder = await getOrderById(orderId);
   sendOrderStatusEmail(updatedOrder, `Payment status updated to ${paymentStatus}`).catch((error) => {
     console.error('Failed to send payment status email:', error.message);
   });
@@ -543,6 +692,12 @@ const createOrRefreshCheckoutSession = async (trackingToken) => {
     `,
     [order.id, session.provider, session.reference, session.checkoutUrl],
   );
+
+  await recordOrderEvent(db, order.id, {
+    eventType: 'payment_link_generated',
+    title: 'GCash checkout refreshed',
+    description: 'A new hosted GCash payment link has been generated.',
+  });
 
   return await getOrderByTrackingToken(trackingToken);
 };
@@ -637,6 +792,12 @@ const handlePaymentWebhookEvent = async (eventPayload) => {
       [order.id],
     );
 
+    await recordOrderEvent(db, order.id, {
+      eventType: 'payment_status',
+      title: 'Payment Paid',
+      description: buildPaymentDescription('paid', order.paymentMethod),
+    });
+
     const updatedOrder = await getOrderById(order.id);
     sendOrderStatusEmail(updatedOrder, 'GCash payment received').catch((error) => {
       console.error('Failed to send payment receipt email:', error.message);
@@ -653,6 +814,12 @@ const handlePaymentWebhookEvent = async (eventPayload) => {
       `,
       [order.id],
     );
+
+    await recordOrderEvent(db, order.id, {
+      eventType: 'payment_status',
+      title: 'Payment Failed',
+      description: buildPaymentDescription('failed', order.paymentMethod),
+    });
   }
 };
 

@@ -12,6 +12,7 @@ import {
 import { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { LineSkeleton } from '../components/LoadingSkeleton.jsx';
+import OrderTimeline from '../components/OrderTimeline.jsx';
 import ServiceChips from '../components/ServiceChips.jsx';
 import { createGcashCheckout, getPaymentConfig, getPublicOrder } from '../lib/api.js';
 import { formatCurrency, formatDateTime, formatLabel, formatPaymentLabel } from '../lib/formatters.js';
@@ -137,6 +138,17 @@ function OrderSummaryPage() {
           ) : null}
 
           <section className="section section--split">
+            <div className="panel">
+              <div className="panel__header">
+                <div>
+                  <span className="eyebrow">Order progress</span>
+                  <h2>Status timeline</h2>
+                </div>
+              </div>
+
+              <OrderTimeline events={order.events} paymentStatus={order.paymentStatus} status={order.status} />
+            </div>
+
             <div className="panel">
               <div className="panel__row">
                 <span>Customer</span>

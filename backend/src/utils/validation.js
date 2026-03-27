@@ -3,7 +3,7 @@ const { createHttpError } = require('./httpError');
 const ALLOWED_CATEGORIES = new Set(['Food', 'Services']);
 const ALLOWED_FULFILLMENT_METHODS = new Set(['pickup', 'delivery']);
 const ALLOWED_PAYMENT_METHODS = new Set(['cash_on_pickup', 'gcash', 'manual_gcash']);
-const ALLOWED_ORDER_STATUSES = new Set(['pending', 'processing', 'ready', 'completed']);
+const ALLOWED_ORDER_STATUSES = new Set(['pending', 'preparing', 'ready', 'completed', 'cancelled']);
 const ALLOWED_PAYMENT_STATUSES = new Set(['pending', 'awaiting_payment', 'paid', 'failed', 'expired', 'refunded']);
 
 const trimString = (value) => (typeof value === 'string' ? value.trim() : '');
@@ -366,6 +366,53 @@ const validateTrackingToken = (value) => {
   return trackingToken;
 };
 
+const validateSettingsPayload = (payload) => {
+  const normalized = {
+    aboutSummary: trimString(payload?.aboutSummary),
+    businessName: trimString(payload?.businessName),
+    contactEmail: trimString(payload?.contactEmail),
+    contactFacebook: trimString(payload?.contactFacebook),
+    contactLocation: trimString(payload?.contactLocation),
+    contactPhone: trimString(payload?.contactPhone),
+    heroHeadline: trimString(payload?.heroHeadline),
+    heroSubtext: trimString(payload?.heroSubtext),
+  };
+
+  if (normalized.businessName.length < 2 || normalized.businessName.length > 160) {
+    throw createHttpError(400, 'Business name must be between 2 and 160 characters.');
+  }
+
+  if (normalized.heroHeadline.length < 10 || normalized.heroHeadline.length > 220) {
+    throw createHttpError(400, 'Hero headline must be between 10 and 220 characters.');
+  }
+
+  if (normalized.heroSubtext.length < 10 || normalized.heroSubtext.length > 260) {
+    throw createHttpError(400, 'Hero subtext must be between 10 and 260 characters.');
+  }
+
+  if (normalized.aboutSummary.length < 20 || normalized.aboutSummary.length > 600) {
+    throw createHttpError(400, 'About summary must be between 20 and 600 characters.');
+  }
+
+  if (!isValidEmail(normalized.contactEmail)) {
+    throw createHttpError(400, 'Contact email is invalid.');
+  }
+
+  if (normalized.contactPhone.length < 7 || normalized.contactPhone.length > 40) {
+    throw createHttpError(400, 'Contact phone must be between 7 and 40 characters.');
+  }
+
+  if (!normalized.contactFacebook || normalized.contactFacebook.length > 255) {
+    throw createHttpError(400, 'Facebook link is required and must be under 255 characters.');
+  }
+
+  if (normalized.contactLocation.length < 2 || normalized.contactLocation.length > 200) {
+    throw createHttpError(400, 'Contact location must be between 2 and 200 characters.');
+  }
+
+  return normalized;
+};
+
 module.exports = {
   ALLOWED_CATEGORIES,
   ALLOWED_ORDER_STATUSES,
@@ -381,6 +428,7 @@ module.exports = {
   validateProductId,
   validateProductPayload,
   validateRegisterPayload,
+  validateSettingsPayload,
   validateTrackingPayload,
   validateTrackingToken,
 };

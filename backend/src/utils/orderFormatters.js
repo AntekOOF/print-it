@@ -36,7 +36,16 @@ const mapOrderItemRow = (row) => ({
   createdAt: row.created_at,
 });
 
-const hydrateOrders = (orderRows, itemRows) => {
+const mapOrderEventRow = (row) => ({
+  id: row.id,
+  orderId: row.order_id,
+  eventType: row.event_type,
+  title: row.title,
+  description: row.description,
+  createdAt: row.created_at,
+});
+
+const hydrateOrders = (orderRows, itemRows, eventRows = []) => {
   const itemsByOrderId = itemRows.reduce((accumulator, row) => {
     const mappedItem = mapOrderItemRow(row);
 
@@ -48,14 +57,27 @@ const hydrateOrders = (orderRows, itemRows) => {
     return accumulator;
   }, {});
 
+  const eventsByOrderId = eventRows.reduce((accumulator, row) => {
+    const mappedEvent = mapOrderEventRow(row);
+
+    if (!accumulator[mappedEvent.orderId]) {
+      accumulator[mappedEvent.orderId] = [];
+    }
+
+    accumulator[mappedEvent.orderId].push(mappedEvent);
+    return accumulator;
+  }, {});
+
   return orderRows.map((row) => ({
     ...mapOrderRow(row),
+    events: eventsByOrderId[row.id] || [],
     items: itemsByOrderId[row.id] || [],
   }));
 };
 
 module.exports = {
   hydrateOrders,
+  mapOrderEventRow,
   mapOrderItemRow,
   mapOrderRow,
 };

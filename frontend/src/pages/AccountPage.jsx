@@ -63,7 +63,7 @@ function AccountPage() {
             <h2>Your confirmations and active orders</h2>
           </div>
 
-          <Link className="button button--primary" to="/menu">
+          <Link className="button button--primary" to="/products">
             Start a new order
           </Link>
         </div>

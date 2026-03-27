@@ -169,3 +169,10 @@ export const createGcashCheckout = (trackingToken) =>
   request(`/payments/orders/${trackingToken}/checkout`, {
     method: 'POST',
   });
+export const getSiteSettings = () => request('/settings');
+export const updateSiteSettings = (token, payload) =>
+  request('/settings', {
+    method: 'PUT',
+    token,
+    body: JSON.stringify(payload),
+  });

@@ -6,18 +6,22 @@ import CartDrawer from './components/CartDrawer.jsx';
 import Navbar from './components/Navbar.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import PublicFooter from './components/PublicFooter.jsx';
+import ScrollToTopButton from './components/ScrollToTopButton.jsx';
 import { useCart } from './hooks/useCart.js';
 import AdminLoginPage from './pages/AdminLoginPage.jsx';
 import AdminPage from './pages/AdminPage.jsx';
 import AboutPage from './pages/AboutPage.jsx';
 import AccountPage from './pages/AccountPage.jsx';
 import CheckoutPage from './pages/CheckoutPage.jsx';
+import ContactPage from './pages/ContactPage.jsx';
 import GalleryPage from './pages/GalleryPage.jsx';
 import HomePage from './pages/HomePage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import MenuPage from './pages/MenuPage.jsx';
 import NotFoundPage from './pages/NotFoundPage.jsx';
 import OrderSummaryPage from './pages/OrderSummaryPage.jsx';
+import ProductsPage from './pages/ProductsPage.jsx';
+import ServicesPage from './pages/ServicesPage.jsx';
 import SignupPage from './pages/SignupPage.jsx';
 import TrackOrderPage from './pages/TrackOrderPage.jsx';
 
@@ -44,21 +48,24 @@ function App() {
   };
 
   const isCartOpen = cartState.isOpen && cartState.pathname === location.pathname;
-  const showFooter = !location.pathname.startsWith('/admin');
+  const isAdminRoute = location.pathname.startsWith('/admin');
 
   return (
     <div className="app-shell">
       <div className="app-shell__glow app-shell__glow--top" />
       <div className="app-shell__glow app-shell__glow--bottom" />
 
-      <Navbar cartCount={itemCount} onCartOpen={handleCartOpen} />
+      {!isAdminRoute ? <Navbar cartCount={itemCount} onCartOpen={handleCartOpen} /> : null}
 
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>
           <Route path="/" element={<HomePage onCartOpen={handleCartOpen} />} />
+          <Route path="/products" element={<ProductsPage onCartOpen={handleCartOpen} />} />
+          <Route path="/services" element={<ServicesPage onCartOpen={handleCartOpen} />} />
           <Route path="/menu" element={<MenuPage onCartOpen={handleCartOpen} />} />
           <Route path="/gallery" element={<GalleryPage />} />
           <Route path="/about" element={<AboutPage />} />
+          <Route path="/contact" element={<ContactPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
           <Route
@@ -92,7 +99,8 @@ function App() {
         </Routes>
       </AnimatePresence>
 
-      {showFooter ? <PublicFooter /> : null}
+      {!isAdminRoute ? <PublicFooter /> : null}
+      {!isAdminRoute ? <ScrollToTopButton /> : null}
       <CartDrawer isOpen={isCartOpen} onClose={handleCartClose} />
     </div>
   );

@@ -38,7 +38,7 @@ function ProductCard({ product, onSelect }) {
         {availabilityLabel ? <div className="availability-pill">{availabilityLabel}</div> : null}
 
         <div className="product-card__footer">
-          <span>{isUnavailable ? 'Unavailable today' : isService ? 'Customize service' : 'Add to cart'}</span>
+          <span>{isUnavailable ? 'Unavailable today' : isService ? 'Order service' : 'Order now'}</span>
           {!isUnavailable ? <ArrowUpRight size={16} /> : null}
         </div>
       </div>

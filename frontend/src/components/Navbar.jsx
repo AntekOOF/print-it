@@ -1,11 +1,13 @@
 import { LogOut, ShieldEllipsis, ShoppingBag, Sparkles, TicketCheck, UserRound } from 'lucide-react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.js';
+import { useSiteSettings } from '../hooks/useSiteSettings.js';
 
 function Navbar({ cartCount, onCartOpen }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { isAdmin, isAuthenticated, logout, user } = useAuth();
+  const { settings } = useSiteSettings();
 
   const handleLogout = () => {
     logout();
@@ -25,7 +27,7 @@ function Navbar({ cartCount, onCartOpen }) {
           <Sparkles size={16} />
         </span>
         <span>
-          <strong>Print-IT</strong>
+          <strong>{settings.businessName}</strong>
           <small>Snacks, prints, and order tracking</small>
         </span>
       </Link>
@@ -34,30 +36,21 @@ function Navbar({ cartCount, onCartOpen }) {
         <NavLink className={({ isActive }) => `navbar__link${isActive ? ' navbar__link--active' : ''}`} to="/">
           Home
         </NavLink>
-        <NavLink
-          className={({ isActive }) => `navbar__link${isActive ? ' navbar__link--active' : ''}`}
-          to="/menu"
-        >
-          Menu
+        <NavLink className={({ isActive }) => `navbar__link${isActive ? ' navbar__link--active' : ''}`} to="/products">
+          Products
         </NavLink>
-        <NavLink
-          className={({ isActive }) => `navbar__link${isActive ? ' navbar__link--active' : ''}`}
-          to="/gallery"
-        >
-          Gallery
+        <NavLink className={({ isActive }) => `navbar__link${isActive ? ' navbar__link--active' : ''}`} to="/services">
+          Services
         </NavLink>
-        <NavLink
-          className={({ isActive }) => `navbar__link${isActive ? ' navbar__link--active' : ''}`}
-          to="/about"
-        >
-          About Us
+        <NavLink className={({ isActive }) => `navbar__link${isActive ? ' navbar__link--active' : ''}`} to="/about">
+          About
         </NavLink>
-        <NavLink
-          className={({ isActive }) => `navbar__link${isActive ? ' navbar__link--active' : ''}`}
-          to="/track-order"
-        >
+        <NavLink className={({ isActive }) => `navbar__link${isActive ? ' navbar__link--active' : ''}`} to="/contact">
+          Contact
+        </NavLink>
+        <NavLink className={({ isActive }) => `navbar__link${isActive ? ' navbar__link--active' : ''}`} to="/track-order">
           <TicketCheck size={16} />
-          Track
+          Track Order
         </NavLink>
       </nav>
 
@@ -85,11 +78,17 @@ function Navbar({ cartCount, onCartOpen }) {
           </button>
         ) : null}
 
-        <button className="cart-button" type="button" onClick={onCartOpen}>
-          <ShoppingBag size={18} />
-          <span>Cart</span>
-          <span className="cart-button__count">{cartCount}</span>
-        </button>
+        <div className="inline-actions">
+          <Link className="button button--primary button--compact" to="/products">
+            Order now
+          </Link>
+
+          <button className="cart-button" type="button" onClick={onCartOpen}>
+            <ShoppingBag size={18} />
+            <span>Cart</span>
+            <span className="cart-button__count">{cartCount}</span>
+          </button>
+        </div>
       </div>
     </header>
   );

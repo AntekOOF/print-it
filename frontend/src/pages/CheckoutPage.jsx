@@ -119,9 +119,9 @@ function CheckoutPage() {
           <ReceiptText size={30} />
           <h1>No items ready for checkout</h1>
           <p>Build the order from the menu first, then return here to submit it.</p>
-          <Link className="button button--primary" to="/menu">
+          <Link className="button button--primary" to="/products">
             <ArrowLeft size={16} />
-            Back to menu
+            Back to products
           </Link>
         </div>
       </motion.main>
@@ -141,7 +141,7 @@ function CheckoutPage() {
           <h1>Submit order details</h1>
         </div>
 
-        <Link className="button button--ghost" to="/menu">
+        <Link className="button button--ghost" to="/products">
           <ArrowLeft size={16} />
           Continue shopping
         </Link>

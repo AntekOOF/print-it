@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { SearchCheck, TicketCheck } from 'lucide-react';
+import { Clock3, SearchCheck, TicketCheck } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { trackOrder } from '../lib/api.js';
@@ -45,7 +45,22 @@ function TrackOrderPage() {
         <div className="auth-card__hero">
           <span className="eyebrow">Public tracking</span>
           <h1>Find your order</h1>
-          <p>Enter the order number and the same contact number used during checkout to open the public summary page.</p>
+          <p>Enter the order number and the same contact number used during checkout to open the live summary page.</p>
+
+          <div className="timeline-preview">
+            <div className="timeline-preview__item">
+              <TicketCheck size={16} />
+              <span>Pending</span>
+            </div>
+            <div className="timeline-preview__item">
+              <Clock3 size={16} />
+              <span>Preparing</span>
+            </div>
+            <div className="timeline-preview__item">
+              <SearchCheck size={16} />
+              <span>Completed</span>
+            </div>
+          </div>
         </div>
 
         <form className="auth-card__form" onSubmit={handleSubmit}>
@@ -68,7 +83,7 @@ function TrackOrderPage() {
 
           <div className="auth-card__note">
             <TicketCheck size={16} />
-            <span>Once found, the order page also shows payment status and any available GCash checkout link.</span>
+            <span>Once found, the order page also shows payment status, timeline history, and any available GCash checkout link.</span>
           </div>
         </form>
       </section>

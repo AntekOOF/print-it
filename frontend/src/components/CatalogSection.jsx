@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import ProductCard from './ProductCard.jsx';
 import ProductModal from './ProductModal.jsx';
 import { ProductGridSkeleton } from './LoadingSkeleton.jsx';
@@ -9,18 +9,27 @@ import { ProductGridSkeleton } from './LoadingSkeleton.jsx';
 const CATEGORY_FILTERS = ['All', 'Food', 'Services'];
 
 function CatalogSection({
+  categoryOptions = CATEGORY_FILTERS,
   cta,
+  defaultCategory = 'All',
   description,
+  emptyDescription = 'No products matched the current category yet.',
+  emptyTitle = 'Nothing to show yet',
   eyebrow,
   error,
+  hideFilters = false,
   isLoading,
+  onCartOpen,
   products,
   previewCount,
   title,
-  onCartOpen,
 }) {
-  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [selectedCategory, setSelectedCategory] = useState(defaultCategory);
   const [selectedProduct, setSelectedProduct] = useState(null);
+
+  useEffect(() => {
+    setSelectedCategory(defaultCategory);
+  }, [defaultCategory]);
 
   const filteredProducts = useMemo(() => {
     const nextProducts =
@@ -38,18 +47,20 @@ function CatalogSection({
           {description ? <p className="section-copy">{description}</p> : null}
         </div>
 
-        <div className="filter-tabs" role="tablist" aria-label="Filter products by category">
-          {CATEGORY_FILTERS.map((category) => (
-            <button
-              key={category}
-              className={`filter-tabs__button${selectedCategory === category ? ' filter-tabs__button--active' : ''}`}
-              type="button"
-              onClick={() => setSelectedCategory(category)}
-            >
-              {category}
-            </button>
-          ))}
-        </div>
+        {!hideFilters && categoryOptions.length > 1 ? (
+          <div className="filter-tabs" role="tablist" aria-label="Filter products by category">
+            {categoryOptions.map((category) => (
+              <button
+                key={category}
+                className={`filter-tabs__button${selectedCategory === category ? ' filter-tabs__button--active' : ''}`}
+                type="button"
+                onClick={() => setSelectedCategory(category)}
+              >
+                {category}
+              </button>
+            ))}
+          </div>
+        ) : null}
       </div>
 
       {error ? <div className="panel error-panel">{error}</div> : null}
@@ -57,18 +68,25 @@ function CatalogSection({
 
       {!isLoading && !error ? (
         <>
-          <div className="product-grid">
-            {filteredProducts.map((product, index) => (
-              <motion.div
-                animate={{ opacity: 1, y: 0 }}
-                initial={{ opacity: 0, y: 16 }}
-                key={product.id}
-                transition={{ delay: index * 0.05 }}
-              >
-                <ProductCard product={product} onSelect={setSelectedProduct} />
-              </motion.div>
-            ))}
-          </div>
+          {filteredProducts.length ? (
+            <div className="product-grid">
+              {filteredProducts.map((product, index) => (
+                <motion.div
+                  animate={{ opacity: 1, y: 0 }}
+                  initial={{ opacity: 0, y: 16 }}
+                  key={product.id}
+                  transition={{ delay: index * 0.05 }}
+                >
+                  <ProductCard product={product} onSelect={setSelectedProduct} />
+                </motion.div>
+              ))}
+            </div>
+          ) : (
+            <div className="empty-panel empty-panel--compact">
+              <h3>{emptyTitle}</h3>
+              <p>{emptyDescription}</p>
+            </div>
+          )}
 
           {cta ? (
             <div className="section__actions">

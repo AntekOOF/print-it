@@ -13,9 +13,9 @@ services:
           name: print-it-db
           property: connectionString
       - key: PUBLIC_CLIENT_URL
-        value: https://print-it-jhoemar.netlify.app
+        value: https://print-it-to-fundit.netlify.app
       - key: PUBLIC_CLIENT_URLS
-        value: https://print-it-jhoemar.netlify.app,http://localhost:5173,http://127.0.0.1:5173
+        value: https://print-it-to-fundit.netlify.app,http://localhost:5173,http://127.0.0.1:5173
       - key: PUBLIC_SERVER_URL
         sync: false
       - key: JWT_SECRET

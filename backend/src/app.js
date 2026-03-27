@@ -5,6 +5,7 @@ const authRoutes = require('./routes/auth.routes');
 const paymentsRoutes = require('./routes/payments.routes');
 const productsRoutes = require('./routes/products.routes');
 const ordersRoutes = require('./routes/orders.routes');
+const settingsRoutes = require('./routes/settings.routes');
 const uploadsRoutes = require('./routes/uploads.routes');
 const paymentsController = require('./controllers/payments.controller');
 const { publicClientUrls, uploadsDir } = require('./config');
@@ -52,6 +53,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/payments', paymentsRoutes);
 app.use('/api/products', productsRoutes);
 app.use('/api/orders', ordersRoutes);
+app.use('/api/settings', settingsRoutes);
 app.use('/api/uploads', uploadsRoutes);
 
 app.use((_request, _response, next) => {
