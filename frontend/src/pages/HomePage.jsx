@@ -174,6 +174,7 @@ function HomePage({ onCartOpen }) {
         description="Start with the current database-backed product list. Snack products stay dynamic, and the printing service card still opens the full customization flow."
         eyebrow="Products"
         error={error}
+        filtersVariant="collapsible"
         isLoading={isLoading}
         onCartOpen={onCartOpen}
         previewCount={3}

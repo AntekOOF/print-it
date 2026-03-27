@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, ChevronDown, SlidersHorizontal } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
 import ProductCard from './ProductCard.jsx';
@@ -17,6 +17,7 @@ function CatalogSection({
   emptyTitle = 'Nothing to show yet',
   eyebrow,
   error,
+  filtersVariant = 'tabs',
   hideFilters = false,
   isLoading,
   onCartOpen,
@@ -26,10 +27,15 @@ function CatalogSection({
 }) {
   const [selectedCategory, setSelectedCategory] = useState(defaultCategory);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [areFiltersExpanded, setAreFiltersExpanded] = useState(filtersVariant !== 'collapsible');
 
   useEffect(() => {
     setSelectedCategory(defaultCategory);
   }, [defaultCategory]);
+
+  useEffect(() => {
+    setAreFiltersExpanded(filtersVariant !== 'collapsible');
+  }, [filtersVariant]);
 
   const filteredProducts = useMemo(() => {
     const nextProducts =
@@ -48,18 +54,54 @@ function CatalogSection({
         </div>
 
         {!hideFilters && categoryOptions.length > 1 ? (
-          <div className="filter-tabs" role="tablist" aria-label="Filter products by category">
-            {categoryOptions.map((category) => (
+          filtersVariant === 'collapsible' ? (
+            <div className="filter-menu">
               <button
-                key={category}
-                className={`filter-tabs__button${selectedCategory === category ? ' filter-tabs__button--active' : ''}`}
+                aria-expanded={areFiltersExpanded}
+                className="filter-menu__toggle"
                 type="button"
-                onClick={() => setSelectedCategory(category)}
+                onClick={() => setAreFiltersExpanded((currentState) => !currentState)}
               >
-                {category}
+                <span>
+                  <SlidersHorizontal size={16} />
+                  Browse categories
+                </span>
+                <strong>{selectedCategory}</strong>
+                <ChevronDown size={16} />
               </button>
-            ))}
-          </div>
+
+              {areFiltersExpanded ? (
+                <div className="filter-tabs" role="tablist" aria-label="Filter products by category">
+                  {categoryOptions.map((category) => (
+                    <button
+                      key={category}
+                      className={`filter-tabs__button${selectedCategory === category ? ' filter-tabs__button--active' : ''}`}
+                      type="button"
+                      onClick={() => {
+                        setSelectedCategory(category);
+                        setAreFiltersExpanded(false);
+                      }}
+                    >
+                      {category}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <div className="filter-tabs" role="tablist" aria-label="Filter products by category">
+              {categoryOptions.map((category) => (
+                <button
+                  key={category}
+                  className={`filter-tabs__button${selectedCategory === category ? ' filter-tabs__button--active' : ''}`}
+                  type="button"
+                  onClick={() => setSelectedCategory(category)}
+                >
+                  {category}
+                </button>
+              ))}
+            </div>
+          )
         ) : null}
       </div>
 
@@ -85,6 +127,11 @@ function CatalogSection({
             <div className="empty-panel empty-panel--compact">
               <h3>{emptyTitle}</h3>
               <p>{emptyDescription}</p>
+              {selectedCategory !== 'All' ? (
+                <button className="button button--ghost button--compact" type="button" onClick={() => setSelectedCategory('All')}>
+                  Show all products
+                </button>
+              ) : null}
             </div>
           )}
 
