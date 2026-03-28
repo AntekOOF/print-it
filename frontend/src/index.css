@@ -2508,13 +2508,15 @@ body::before {
 
 .product-grid {
   gap: var(--space-3);
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 22rem));
+  justify-content: center;
 }
 
 .product-card {
   display: grid;
   grid-template-rows: auto 1fr;
   height: 100%;
+  width: min(100%, 22rem);
 }
 
 .product-card__media {
