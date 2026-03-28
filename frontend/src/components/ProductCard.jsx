@@ -1,21 +1,41 @@
 import { motion } from 'framer-motion';
-import { ArrowUpRight, Printer, UtensilsCrossed } from 'lucide-react';
+import { Eye, Printer, ShoppingBag, UtensilsCrossed } from 'lucide-react';
+import { useState } from 'react';
+import { useCart } from '../hooks/useCart.js';
 import { formatCurrency, formatProductAvailability } from '../lib/formatters.js';
 import { resolveMediaUrl } from '../lib/media.js';
+import QuantitySelector from './QuantitySelector.jsx';
 
-function ProductCard({ product, onSelect }) {
+function ProductCard({ onAdded, onSelect, product }) {
   const isService = product.category === 'Services';
   const isUnavailable = product.category === 'Food' && product.stockQuantity === 0;
   const availabilityLabel = formatProductAvailability(product);
+  const maxQuantity =
+    product.category === 'Food' && product.stockQuantity !== null && product.stockQuantity !== undefined
+      ? Math.max(1, product.stockQuantity)
+      : 999;
+  const [quantity, setQuantity] = useState(1);
+  const { addItem } = useCart();
+
+  const handleCardAction = () => {
+    if (isUnavailable) {
+      return;
+    }
+
+    if (isService) {
+      onSelect(product, quantity);
+      return;
+    }
+
+    addItem(product, quantity);
+    onAdded?.();
+  };
 
   return (
-    <motion.button
+    <motion.article
       className={`product-card${isUnavailable ? ' product-card--disabled' : ''}`}
-      disabled={isUnavailable}
-      type="button"
       whileHover={isUnavailable ? undefined : { y: -8, scale: 1.01 }}
       whileTap={isUnavailable ? undefined : { scale: 0.99 }}
-      onClick={() => onSelect(product)}
     >
       <div className="product-card__media">
         <img alt={product.name} src={resolveMediaUrl(product.image)} />
@@ -27,7 +47,7 @@ function ProductCard({ product, onSelect }) {
             {isService ? <Printer size={14} /> : <UtensilsCrossed size={14} />}
             {product.category}
           </span>
-          <strong>{formatCurrency(product.price)}</strong>
+          <strong className="product-card__price">{formatCurrency(product.price)}</strong>
         </div>
 
         <div className="product-card__copy">
@@ -37,12 +57,35 @@ function ProductCard({ product, onSelect }) {
 
         {availabilityLabel ? <div className="availability-pill">{availabilityLabel}</div> : null}
 
-        <div className="product-card__footer">
-          <span>{isUnavailable ? 'Unavailable today' : isService ? 'Order service' : 'Order now'}</span>
-          {!isUnavailable ? <ArrowUpRight size={16} /> : null}
+        <div className="product-card__controls">
+          <div className="product-card__quantity">
+            <span>Quantity</span>
+            <QuantitySelector max={maxQuantity} value={quantity} onChange={setQuantity} />
+          </div>
+
+          <div className="product-card__actions">
+            <button
+              className="button button--ghost button--compact"
+              type="button"
+              onClick={() => onSelect(product, quantity)}
+            >
+              <Eye size={16} />
+              Details
+            </button>
+
+            <button
+              className="button button--primary button--compact"
+              disabled={isUnavailable}
+              type="button"
+              onClick={handleCardAction}
+            >
+              <ShoppingBag size={16} />
+              {isUnavailable ? 'Unavailable' : isService ? 'Customize & add' : 'Add to cart'}
+            </button>
+          </div>
         </div>
       </div>
-    </motion.button>
+    </motion.article>
   );
 }
 

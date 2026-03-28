@@ -119,7 +119,16 @@ function CatalogSection({
                   key={product.id}
                   transition={{ delay: index * 0.05 }}
                 >
-                  <ProductCard product={product} onSelect={setSelectedProduct} />
+                  <ProductCard
+                    onAdded={onCartOpen}
+                    onSelect={(selectedProductItem, initialQuantity = 1) =>
+                      setSelectedProduct({
+                        initialQuantity,
+                        product: selectedProductItem,
+                      })
+                    }
+                    product={product}
+                  />
                 </motion.div>
               ))}
             </div>
@@ -147,8 +156,9 @@ function CatalogSection({
       ) : null}
 
       <ProductModal
-        isOpen={Boolean(selectedProduct)}
-        product={selectedProduct}
+        initialQuantity={selectedProduct?.initialQuantity}
+        isOpen={Boolean(selectedProduct?.product)}
+        product={selectedProduct?.product}
         onAdded={onCartOpen}
         onClose={() => setSelectedProduct(null)}
       />

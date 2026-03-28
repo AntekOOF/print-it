@@ -22,10 +22,10 @@ const buildServiceDefaults = (product) => {
   };
 };
 
-function ProductModalContent({ onAdded, onClose, product }) {
+function ProductModalContent({ initialQuantity = 1, onAdded, onClose, product }) {
   const { addItem } = useCart();
   const isService = product.category === 'Services';
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantity] = useState(Math.max(1, initialQuantity));
   const [serviceDetails, setServiceDetails] = useState(buildServiceDefaults(product));
   const [error, setError] = useState('');
   const [isUploadingFile, setIsUploadingFile] = useState(false);
@@ -232,12 +232,13 @@ function ProductModalContent({ onAdded, onClose, product }) {
   );
 }
 
-function ProductModal({ isOpen, onAdded, onClose, product }) {
+function ProductModal({ initialQuantity = 1, isOpen, onAdded, onClose, product }) {
   return (
     <AnimatePresence>
       {isOpen && product ? (
         <ProductModalContent
-          key={product.id}
+          key={`${product.id}-${initialQuantity}`}
+          initialQuantity={initialQuantity}
           onAdded={onAdded}
           onClose={onClose}
           product={product}
