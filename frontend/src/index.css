@@ -2126,7 +2126,7 @@ input[type='file'] {
   position: fixed;
   right: 1.4rem;
   bottom: 1.4rem;
-  z-index: 30;
+  z-index: 18;
   width: 3.2rem;
   height: 3.2rem;
   border: none;
