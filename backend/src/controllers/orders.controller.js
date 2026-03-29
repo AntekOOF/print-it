@@ -5,6 +5,7 @@ const {
   validateOrderId,
   validateOrderPayload,
   validateOrderStatusPayload,
+  validatePaymentProofPayload,
   validatePaymentStatusPayload,
   validateTrackingPayload,
   validateTrackingToken,
@@ -115,6 +116,27 @@ const updatePaymentStatus = async (request, response, next) => {
   }
 };
 
+const uploadPaymentProof = async (request, response, next) => {
+  try {
+    const orderId = validateOrderId(request.params.orderId);
+    const paymentProofPayload = validatePaymentProofPayload(request.body);
+    const updatedOrder = await ordersService.uploadPaymentProof(
+      orderId,
+      {
+        ...paymentProofPayload,
+        file: request.file,
+      },
+      request.user,
+    );
+    response.status(201).json({
+      data: updatedOrder,
+      message: 'Payment proof uploaded successfully.',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const getOrderSummary = async (_request, response, next) => {
   try {
     const summary = await ordersService.getOrderSummary();
@@ -132,6 +154,7 @@ module.exports = {
   listOrders,
   listMyOrders,
   trackOrder,
+  uploadPaymentProof,
   updatePaymentStatus,
   updateOrderStatus,
 };

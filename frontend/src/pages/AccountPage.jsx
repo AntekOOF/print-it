@@ -98,6 +98,7 @@ function AccountPage() {
                   <span>{formatDateTime(order.createdAt)}</span>
                   <span>{formatPaymentLabel(order.paymentMethod)}</span>
                   <span>{order.contactNumber}</span>
+                  {order.paymentProofUrl ? <span>Proof uploaded</span> : null}
                 </div>
 
                 <div className="inline-actions">

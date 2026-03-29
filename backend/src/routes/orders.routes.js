@@ -1,6 +1,7 @@
 const express = require('express');
 const ordersController = require('../controllers/orders.controller');
 const { requireAdmin, requireAuth } = require('../middleware/auth.middleware');
+const { paymentProofUpload } = require('../middleware/upload.middleware');
 
 const router = express.Router();
 
@@ -11,6 +12,7 @@ router.get('/mine', requireAuth, ordersController.listMyOrders);
 router.get('/admin/summary', requireAdmin, ordersController.getOrderSummary);
 router.get('/', requireAdmin, ordersController.listOrders);
 router.get('/:orderId', requireAdmin, ordersController.getOrderById);
+router.post('/:orderId/payment-proof', requireAuth, paymentProofUpload.single('file'), ordersController.uploadPaymentProof);
 router.patch('/:orderId/status', requireAdmin, ordersController.updateOrderStatus);
 router.patch('/:orderId/payment-status', requireAdmin, ordersController.updatePaymentStatus);
 

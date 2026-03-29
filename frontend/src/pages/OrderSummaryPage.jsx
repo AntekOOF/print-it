@@ -14,12 +14,14 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { LineSkeleton } from '../components/LoadingSkeleton.jsx';
 import OrderTimeline from '../components/OrderTimeline.jsx';
 import ServiceChips from '../components/ServiceChips.jsx';
-import { createGcashCheckout, getPaymentConfig, getPublicOrder } from '../lib/api.js';
+import { useAuth } from '../hooks/useAuth.js';
+import { createGcashCheckout, getPaymentConfig, getPublicOrder, uploadOrderPaymentProof } from '../lib/api.js';
 import { formatCurrency, formatDateTime, formatLabel, formatPaymentLabel } from '../lib/formatters.js';
 import { resolveMediaUrl } from '../lib/media.js';
 
 function OrderSummaryPage() {
   const { trackingToken } = useParams();
+  const { isAuthenticated, token } = useAuth();
   const [searchParams] = useSearchParams();
   const [order, setOrder] = useState(null);
   const [paymentConfig, setPaymentConfig] = useState({
@@ -29,8 +31,12 @@ function OrderSummaryPage() {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshingCheckout, setIsRefreshingCheckout] = useState(false);
+  const [isUploadingProof, setIsUploadingProof] = useState(false);
   const [copyState, setCopyState] = useState('');
   const [error, setError] = useState('');
+  const [paymentReferenceDraft, setPaymentReferenceDraft] = useState('');
+  const [proofFile, setProofFile] = useState(null);
+  const [proofNotice, setProofNotice] = useState('');
 
   useEffect(() => {
     let ignore = false;
@@ -43,6 +49,7 @@ function OrderSummaryPage() {
         if (!ignore) {
           setOrder(orderData);
           setPaymentConfig(paymentData);
+          setPaymentReferenceDraft(orderData.paymentReference || '');
           setError('');
         }
       } catch (loadError) {
@@ -90,6 +97,40 @@ function OrderSummaryPage() {
       setError(checkoutError.message);
     } finally {
       setIsRefreshingCheckout(false);
+    }
+  };
+
+  const handleProofUpload = async (event) => {
+    event.preventDefault();
+
+    if (!isAuthenticated || !token) {
+      setError('Sign in to your customer account before uploading payment proof.');
+      return;
+    }
+
+    if (!order?.id) {
+      setError('The order is not ready yet. Refresh the page and try again.');
+      return;
+    }
+
+    if (!proofFile) {
+      setError('Select a payment proof file first.');
+      return;
+    }
+
+    try {
+      setIsUploadingProof(true);
+      setError('');
+      setProofNotice('');
+      const updatedOrder = await uploadOrderPaymentProof(token, order.id, proofFile, paymentReferenceDraft);
+      setOrder(updatedOrder);
+      setPaymentReferenceDraft(updatedOrder.paymentReference || '');
+      setProofFile(null);
+      setProofNotice('Payment proof uploaded. The admin can now review it.');
+    } catch (uploadError) {
+      setError(uploadError.message);
+    } finally {
+      setIsUploadingProof(false);
     }
   };
 
@@ -271,6 +312,73 @@ function OrderSummaryPage() {
                 <p className="summary-item__note">
                   Submitted reference: <strong>{order.paymentReference}</strong>
                 </p>
+              ) : null}
+              {order.paymentProofUrl ? (
+                <div className="panel panel--soft payment-proof-panel">
+                  <div className="panel__row">
+                    <span>Uploaded proof</span>
+                    <strong>{order.paymentProofName || 'Manual GCash proof'}</strong>
+                  </div>
+                  <div className="inline-actions">
+                    <a
+                      className="button button--ghost button--compact"
+                      href={resolveMediaUrl(order.paymentProofUrl)}
+                      rel="noreferrer"
+                      target="_blank"
+                    >
+                      <ExternalLink size={16} />
+                      Open uploaded proof
+                    </a>
+                    {order.paymentProofUploadedAt ? (
+                      <span className="summary-item__note">
+                        Uploaded {formatDateTime(order.paymentProofUploadedAt)}
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
+              {order.paymentStatus !== 'paid' ? (
+                isAuthenticated ? (
+                  <form className="payment-proof-form" onSubmit={handleProofUpload}>
+                    <div className="field">
+                      <label htmlFor="paymentProofReference">GCash reference or sender name</label>
+                      <input
+                        id="paymentProofReference"
+                        placeholder="Optional: sender name or transaction code"
+                        value={paymentReferenceDraft}
+                        onChange={(event) => setPaymentReferenceDraft(event.target.value)}
+                      />
+                    </div>
+                    <div className="field">
+                      <label htmlFor="paymentProofFile">Upload screenshot or PDF proof</label>
+                      <label className="upload-field" htmlFor="paymentProofFile">
+                        <Smartphone size={16} />
+                        <span>{proofFile?.name || 'Choose an image or PDF proof'}</span>
+                        <small>JPG, PNG, WEBP, or PDF up to 8 MB.</small>
+                      </label>
+                      <input
+                        id="paymentProofFile"
+                        accept=".pdf,image/jpeg,image/png,image/webp"
+                        type="file"
+                        onClick={(event) => {
+                          event.currentTarget.value = '';
+                        }}
+                        onChange={(event) => setProofFile(event.target.files?.[0] || null)}
+                      />
+                    </div>
+                    {proofNotice ? <p className="summary-item__note">{proofNotice}</p> : null}
+                    <button className="button button--primary" disabled={isUploadingProof} type="submit">
+                      {isUploadingProof ? 'Uploading proof...' : order.paymentProofUrl ? 'Replace proof' : 'Upload proof'}
+                    </button>
+                  </form>
+                ) : (
+                  <div className="panel panel--soft">
+                    <p className="summary-item__note">
+                      Sign in to the same customer account that placed this order if you want to upload payment proof
+                      for admin verification.
+                    </p>
+                  </div>
+                )
               ) : null}
             </section>
           ) : null}

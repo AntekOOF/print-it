@@ -110,6 +110,21 @@ export const uploadPrintFile = async (file) => {
   });
 };
 
+export const uploadOrderPaymentProof = async (token, orderId, file, paymentReference = '') => {
+  const body = new FormData();
+  body.append('file', file);
+
+  if (paymentReference) {
+    body.append('paymentReference', paymentReference);
+  }
+
+  return request(`/orders/${orderId}/payment-proof`, {
+    method: 'POST',
+    token,
+    body,
+  });
+};
+
 export const registerUser = (payload) =>
   request('/auth/register', {
     method: 'POST',

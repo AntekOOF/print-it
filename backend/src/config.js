@@ -58,9 +58,18 @@ module.exports = {
   jwtSecret: process.env.JWT_SECRET || 'change-this-jwt-secret',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '8h',
   adminEmail: process.env.ADMIN_EMAIL || 'admin@print-it.local',
-  adminPassword: process.env.ADMIN_PASSWORD || 'PrintITAdmin123!',
+  adminPassword: process.env.ADMIN_PASSWORD || 'change-this-admin-password',
   manualGcashNumber: process.env.MANUAL_GCASH_NUMBER || '',
   uploadsDir: path.resolve(__dirname, '..', 'uploads'),
+  mediaStorage: {
+    provider: process.env.MEDIA_STORAGE_PROVIDER || 'auto',
+    cloudinary: {
+      apiKey: process.env.CLOUDINARY_API_KEY || '',
+      apiSecret: process.env.CLOUDINARY_API_SECRET || '',
+      cloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
+      folder: process.env.CLOUDINARY_FOLDER || 'print-it',
+    },
+  },
   paymongo: {
     secretKey: process.env.PAYMONGO_SECRET_KEY || '',
     webhookSecret: process.env.PAYMONGO_WEBHOOK_SECRET || '',

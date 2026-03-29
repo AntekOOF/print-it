@@ -67,12 +67,13 @@ Print-IT/
 
 - JWT-protected login
 - Add, edit, hide/show, and delete products
-- Upload product images to the backend
+- Upload product images through the configured media provider
 - Manage food stock and daily limits
 - Configure printing options for service products
 - Filter orders by:
   search, order status, payment status, and date range
 - Update order status
+- Review manual GCash payment proof uploads
 - View booked and paid summary cards
 
 ### Backend and database
@@ -107,8 +108,13 @@ PUBLIC_CLIENT_URL=http://localhost:5173
 PUBLIC_CLIENT_URLS=
 JWT_SECRET=change-this-jwt-secret
 ADMIN_EMAIL=admin@print-it.local
-ADMIN_PASSWORD=PrintITAdmin123!
+ADMIN_PASSWORD=replace-with-a-strong-password
 MANUAL_GCASH_NUMBER=09771330538
+MEDIA_STORAGE_PROVIDER=auto
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
+CLOUDINARY_FOLDER=print-it
 PAYMONGO_SECRET_KEY=
 PAYMONGO_WEBHOOK_SECRET=
 SMTP_HOST=
@@ -122,6 +128,8 @@ Notes:
 
 - `npm run db:init` will run migrations and upsert the admin user using `ADMIN_EMAIL` and `ADMIN_PASSWORD`.
 - `MANUAL_GCASH_NUMBER` enables the manual GCash transfer option shown in checkout and the public order page.
+- `MEDIA_STORAGE_PROVIDER=auto` uses Cloudinary when its credentials are present, otherwise it falls back to local uploads.
+- `CLOUDINARY_*` is recommended for production so product images, print files, and payment proofs survive redeploys.
 - Leave `PAYMONGO_*` empty if you do not want GCash enabled yet.
 - Leave `SMTP_*` empty if you do not want email notifications yet.
 - Use `PUBLIC_CLIENT_URLS` for multiple allowed frontend origins in production, such as the Netlify site plus local development URLs.
@@ -224,9 +232,9 @@ PUBLIC_CLIENT_URLS=https://your-netlify-site.netlify.app,http://localhost:5173,h
 
 Important note about uploads:
 
-- product images and print files are currently stored on the backend filesystem
-- most free hosting plans use ephemeral storage, so uploaded files can be lost on redeploy or restart
-- for long-term production use, move uploads to object storage such as Cloudinary, S3, or Supabase Storage
+- the app now supports Cloudinary for product images, print files, and manual GCash proof uploads
+- if Cloudinary credentials are not configured, uploads fall back to the backend filesystem
+- free hosting plans often use ephemeral local storage, so Cloudinary is the recommended production setup
 
 ## GCash Setup
 
@@ -260,7 +268,8 @@ Flow:
 2. Customer sees the recipient number in checkout and again on the public order page.
 3. Customer can add an optional sender name or transfer reference when placing the order.
 4. The order is created with `payment_status = awaiting_payment`.
-5. Admin verifies the payment and updates the payment status to `paid` from the dashboard.
+5. Customer can upload a screenshot or PDF payment proof from the order confirmation page.
+6. Admin reviews the proof and updates the payment status to `paid` from the dashboard.
 
 ## API Overview
 
@@ -286,6 +295,7 @@ Flow:
 - `GET /api/orders/admin/summary`
 - `GET /api/orders`
 - `GET /api/orders/:orderId`
+- `POST /api/orders/:orderId/payment-proof`
 - `PATCH /api/orders/:orderId/status`
 - `PATCH /api/orders/:orderId/payment-status`
 
@@ -324,7 +334,7 @@ The seeded admin account comes from your backend environment:
 - email: value of `ADMIN_EMAIL`
 - password: value of `ADMIN_PASSWORD`
 
-With the current example values:
+With the example values:
 
 - email: `admin@print-it.local`
-- password: `PrintITAdmin123!`
+- password: the value you set in `ADMIN_PASSWORD`

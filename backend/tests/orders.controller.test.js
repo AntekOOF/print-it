@@ -147,3 +147,52 @@ test('listMyOrders returns orders for the authenticated customer', async () => {
   assert.deepEqual(response.body.data, myOrders);
   assert.equal(next.mock.calls.length, 0);
 });
+
+test('uploadPaymentProof returns the updated order payload for the authenticated owner', async () => {
+  const updatedOrder = {
+    id: 9,
+    orderNumber: 'PIT-20260329-PROOF01',
+    paymentProofUrl: 'https://example.com/proof.png',
+  };
+
+  const uploadMock = mock.method(ordersService, 'uploadPaymentProof', async () => updatedOrder);
+  const response = createResponse();
+  const next = mock.fn();
+
+  await ordersController.uploadPaymentProof(
+    {
+      params: {
+        orderId: '9',
+      },
+      body: {
+        paymentReference: 'GCASH-12345',
+      },
+      file: {
+        originalname: 'proof.png',
+      },
+      user: {
+        sub: 12,
+        role: 'customer',
+      },
+    },
+    response,
+    next,
+  );
+
+  assert.deepEqual(uploadMock.mock.calls[0].arguments, [
+    9,
+    {
+      paymentReference: 'GCASH-12345',
+      file: {
+        originalname: 'proof.png',
+      },
+    },
+    {
+      sub: 12,
+      role: 'customer',
+    },
+  ]);
+  assert.equal(response.statusCode, 201);
+  assert.deepEqual(response.body.data, updatedOrder);
+  assert.equal(next.mock.calls.length, 0);
+});

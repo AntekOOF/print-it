@@ -247,7 +247,8 @@ function CheckoutPage() {
               </div>
               <p className="summary-item__note">
                 Place the order first, then send the payment to this number. Use your name or order number as the
-                transfer note so the admin can verify it faster.
+                transfer note so the admin can verify it faster. After the order is submitted, you can upload a
+                screenshot or PDF payment proof from the confirmation page.
               </p>
               <div className="field">
                 <label htmlFor="paymentReference">Sender name or transfer reference</label>

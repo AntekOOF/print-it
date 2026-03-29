@@ -59,7 +59,7 @@ function ProductModalContent({ initialQuantity = 1, onAdded, onClose, product })
       setServiceDetails((currentDetails) => ({
         ...currentDetails,
         fileName: uploadedFile.originalName,
-        fileUrl: uploadedFile.url,
+        fileUrl: uploadedFile.assetPath || uploadedFile.relativePath || uploadedFile.url,
       }));
     } catch (uploadError) {
       setError(uploadError.message);
@@ -194,7 +194,9 @@ function ProductModalContent({ initialQuantity = 1, onAdded, onClose, product })
                       {isUploadingFile ? <LoaderCircle className="spin" size={16} /> : <Paperclip size={16} />}
                       <span>{serviceDetails.fileName || 'Attach the print file'}</span>
                       <small>
-                        {isUploadingFile ? 'Uploading to the server...' : 'PDF, DOCX, XLSX, TXT, JPG, PNG, or WEBP'}
+                        {isUploadingFile
+                          ? 'Uploading your file...'
+                          : 'PDF, DOCX, XLSX, TXT, JPG, PNG, or WEBP'}
                       </small>
                     </label>
                     <input id="fileUpload" type="file" onChange={handleFileUpload} />

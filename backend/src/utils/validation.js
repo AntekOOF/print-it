@@ -294,6 +294,18 @@ const validatePaymentStatusPayload = (payload) => {
   return paymentStatus;
 };
 
+const validatePaymentProofPayload = (payload) => {
+  const paymentReference = trimString(payload?.paymentReference);
+
+  if (paymentReference.length > 160) {
+    throw createHttpError(400, 'Payment reference must be 160 characters or fewer.');
+  }
+
+  return {
+    paymentReference,
+  };
+};
+
 const validateFilters = (query) => {
   const status = trimString(query?.status).toLowerCase();
   const paymentStatus = trimString(query?.paymentStatus).toLowerCase();
@@ -425,6 +437,7 @@ module.exports = {
   validateOrderPayload,
   validateOrderStatusPayload,
   validatePaymentStatusPayload,
+  validatePaymentProofPayload,
   validateProductId,
   validateProductPayload,
   validateRegisterPayload,

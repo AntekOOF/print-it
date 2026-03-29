@@ -1285,6 +1285,12 @@ input[type='file'] {
   letter-spacing: 0.08em;
 }
 
+.payment-proof-panel,
+.payment-proof-form {
+  display: grid;
+  gap: 0.9rem;
+}
+
 .auth-page {
   min-height: calc(100vh - 10rem);
   place-items: center;

@@ -28,6 +28,16 @@ services:
         sync: false
       - key: MANUAL_GCASH_NUMBER
         value: "09771330538"
+      - key: MEDIA_STORAGE_PROVIDER
+        value: auto
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: CLOUDINARY_FOLDER
+        value: print-it
       - key: PAYMONGO_SECRET_KEY
         sync: false
       - key: PAYMONGO_WEBHOOK_SECRET

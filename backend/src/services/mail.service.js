@@ -71,7 +71,7 @@ const sendOrderCreatedEmail = async (order) => {
       ${order.paymentUrl ? `<p><strong>Pay with GCash:</strong> <a href="${order.paymentUrl}">${order.paymentUrl}</a></p>` : ''}
       ${
         order.paymentMethod === 'manual_gcash' && manualGcashNumber
-          ? `<p><strong>Manual GCash number:</strong> ${manualGcashNumber}</p><p>Send the payment manually, then wait for admin verification.</p>`
+          ? `<p><strong>Manual GCash number:</strong> ${manualGcashNumber}</p><p>Send the payment manually, upload your payment proof from the order page, then wait for admin verification.</p>`
           : ''
       }
       <ul>${buildItemsHtml(order.items)}</ul>

@@ -2,6 +2,7 @@ const db = require('../db/pool');
 const { createHttpError } = require('../utils/httpError');
 const { hydrateOrders } = require('../utils/orderFormatters');
 const { sendOrderCreatedEmail, sendOrderStatusEmail } = require('./mail.service');
+const { uploadFile } = require('./media.service');
 const {
   createCheckoutSession,
   generateTrackingToken,
@@ -23,6 +24,9 @@ const ORDER_FIELDS_SQL = `
   payment_status,
   payment_provider,
   payment_reference,
+  payment_proof_name,
+  payment_proof_url,
+  payment_proof_uploaded_at,
   payment_url,
   paid_at,
   subtotal,
@@ -130,6 +134,21 @@ const getOrderById = async (orderId, existingRunner) => getOrderByField('id', or
 
 const getOrderByTrackingToken = async (trackingToken, existingRunner) =>
   getOrderByField('tracking_token', trackingToken, existingRunner);
+
+const getRawOrderRowById = async (orderId, existingRunner) => {
+  const runner = existingRunner || db;
+  const orderResult = await runner.query(
+    `
+      SELECT ${ORDER_FIELDS_SQL}
+      FROM orders
+      WHERE id = $1
+      LIMIT 1
+    `,
+    [orderId],
+  );
+
+  return orderResult.rows[0] || null;
+};
 
 const buildOrderFilters = (filters) => {
   const values = [];
@@ -663,6 +682,69 @@ const updatePaymentStatus = async (orderId, paymentStatus) => {
   return updatedOrder;
 };
 
+const uploadPaymentProof = async (orderId, proofInput, authUser) => {
+  const client = await db.getClient();
+
+  try {
+    await client.query('BEGIN');
+
+    const orderRow = await getRawOrderRowById(orderId, client);
+
+    if (!orderRow) {
+      throw createHttpError(404, 'Order not found.');
+    }
+
+    if (authUser?.role !== 'admin' && Number(orderRow.user_id) !== Number(authUser?.sub)) {
+      throw createHttpError(403, 'You can only upload proof for your own orders.');
+    }
+
+    if (orderRow.payment_method !== 'manual_gcash') {
+      throw createHttpError(400, 'Payment proof uploads are only available for manual GCash orders.');
+    }
+
+    if (orderRow.payment_status === 'paid') {
+      throw createHttpError(400, 'This order is already marked as paid.');
+    }
+
+    const uploadedProof = await uploadFile({
+      file: proofInput.file,
+      folderName: 'payment-proofs',
+    });
+
+    const nextPaymentReference = proofInput.paymentReference || orderRow.payment_reference || null;
+
+    await client.query(
+      `
+        UPDATE orders
+        SET
+          payment_reference = $2,
+          payment_proof_name = $3,
+          payment_proof_url = $4,
+          payment_proof_uploaded_at = NOW(),
+          updated_at = NOW()
+        WHERE id = $1
+      `,
+      [orderId, nextPaymentReference, uploadedProof.originalName, uploadedProof.assetPath],
+    );
+
+    await recordOrderEvent(client, orderId, {
+      eventType: 'payment_proof',
+      title: 'Payment proof uploaded',
+      description: nextPaymentReference
+        ? `Customer uploaded manual GCash proof with reference ${nextPaymentReference}.`
+        : 'Customer uploaded manual GCash proof for verification.',
+    });
+
+    await client.query('COMMIT');
+    return await getOrderById(orderId);
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+};
+
 const createOrRefreshCheckoutSession = async (trackingToken) => {
   const order = await getOrderByTrackingToken(trackingToken);
 
@@ -833,6 +915,7 @@ module.exports = {
   listOrders,
   listOrdersByUser,
   trackOrder,
+  uploadPaymentProof,
   updatePaymentStatus,
   updateOrderStatus,
 };

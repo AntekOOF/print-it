@@ -58,7 +58,7 @@ function AdminProductForm({ isSaving, onCancel, onSubmit, product, token }) {
       const uploadedFile = await uploadProductImage(token, file);
       setValues((currentValues) => ({
         ...currentValues,
-        image: uploadedFile.relativePath,
+        image: uploadedFile.assetPath || uploadedFile.relativePath || uploadedFile.url,
       }));
     } catch (uploadError) {
       setError(uploadError.message);
@@ -147,7 +147,7 @@ function AdminProductForm({ isSaving, onCancel, onSubmit, product, token }) {
         <label className="upload-field" htmlFor="productImageUpload">
           {isUploadingImage ? <LoaderCircle className="spin" size={16} /> : <ImagePlus size={16} />}
           <span>{isUploadingImage ? 'Uploading product image...' : 'Select JPG, PNG, WEBP, GIF, or SVG'}</span>
-          <small>Uploaded images are stored on the backend and can be reused later.</small>
+          <small>Uploaded images are stored in your configured media provider and can be reused later.</small>
         </label>
         <input id="productImageUpload" type="file" onChange={handleImageUpload} />
       </div>

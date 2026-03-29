@@ -1,3 +1,5 @@
+import { resolveMediaUrl } from '../lib/media.js';
+
 function ServiceChips({ details, showFileLink = false }) {
   if (!details) {
     return null;
@@ -22,7 +24,7 @@ function ServiceChips({ details, showFileLink = false }) {
         <span key={label}>{label}</span>
       ))}
       {showFileLink && details.fileUrl ? (
-        <a className="file-chip" href={details.fileUrl} rel="noreferrer" target="_blank">
+        <a className="file-chip" href={resolveMediaUrl(details.fileUrl)} rel="noreferrer" target="_blank">
           Open file
         </a>
       ) : null}
